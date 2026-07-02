@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>إدارة مكتبة الشيخان</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@300;400;500;600;700;900&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+  <div class="app-shell">
+    <aside id="sidebar" class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-title"><span class="brand-icon">📖</span> مكتبة الشيخان</div>
+        <div class="brand-subtitle">نظام إدارة الكتب والطلبات</div>
+      </div>
+      <nav class="sidebar-nav">
+        <button class="sidebar-link active" data-section="dashboard"><span class="nav-icon">📊</span> لوحة التحكم</button>
+        <button class="sidebar-link" data-section="books"><span class="nav-icon">📚</span> الكتب</button>
+        <button class="sidebar-link" data-section="orders"><span class="nav-icon">📦</span> الطلبات</button>
+        <button class="sidebar-link" data-section="offers"><span class="nav-icon">🎁</span> العروض</button>
+        <button class="sidebar-link" data-section="purchases"><span class="nav-icon">🛒</span> المشتريات</button>
+        <button class="sidebar-link" data-section="invoices"><span class="nav-icon">📄</span> الفواتير</button>
+        <button class="sidebar-link" data-section="expenses"><span class="nav-icon">💰</span> المصروفات</button>
+        <button class="sidebar-link" data-section="links"><span class="nav-icon">🔗</span> الروابط المفيدة</button>
+        <button class="sidebar-link" data-section="backup"><span class="nav-icon">💾</span> النسخ الاحتياطي</button>
+      </nav>
+    </aside>
+    <div class="sidebar-backdrop"></div>
+    <div class="page-frame">
+      <header class="topbar">
+        <button id="sidebarToggle" class="sidebar-toggle" aria-label="عرض القائمة">☰</button>
+        <div class="page-header">
+          <h1 id="pageTitle">الكتب</h1>
+          <p>لوحة تحكم احترافية لتنسيق البيانات وتحرير الكتب والطلبات بسهولة.</p>
+        </div>
+        <div class="topbar-meta">
+          <span id="appDateTime">التاريخ والوقت</span>
+          <button id="openCalculatorBtn" class="btn btn-outline">الآلة الحاسبة</button>
+        </div>
+      </header>
+      <main class="page-main">
+        <section id="books" class="section active">
+          <div class="section-head">
+            <div>
+              <h2>إدارة الكتب</h2>
+              <p class="section-subtitle">أضف أو حرر بيانات الكتب مباشرة عبر الجدول.</p>
+            </div>
+            <div class="section-actions">
+              <input type="text" id="bookSearch" placeholder="البحث بالاسم" class="search-input">
+              <button onclick="selectAllBooks()" class="btn btn-outline" title="تحديد الكل (Ctrl+A)">تحديد الكل</button>
+              <button onclick="exportBooks()" class="btn btn-outline">تصدير إلى Excel</button>
+              <button onclick="importBooks()" class="btn btn-outline">استيراد من Excel</button>
+            </div>
+          </div>
+          <form id="bookForm" class="card form-card">
+            <div class="form-grid">
+              <input type="text" id="bookName" placeholder="اسم الكتاب" required>
+              <input type="text" id="publisher" placeholder="دار النشر" required>
+              <input type="number" id="customerPrice" placeholder="سعر العميل" step="0.01" required>
+              <input type="number" id="myPrice" placeholder="سعري" step="0.01" required>
+              <input type="number" id="bookQuantity" placeholder="الكمية" min="0" value="0">
+            </div>
+            <button type="submit" class="btn btn-gold" id="bookSubmitBtn">إضافة كتاب</button>
+          </form>
+          <div class="table-card">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th><input type="checkbox" id="bookSelectAll" onchange="toggleSelectAllBooks()"></th>
+                  <th>اسم الكتاب</th>
+                  <th>دار النشر</th>
+                  <th>سعر العميل</th>
+                  <th>سعري</th>
+                  <th>الكمية</th>
+                  <th>إجراءات</th>
+                </tr>
+              </thead>
+              <tbody id="bookTable"></tbody>
+            </table>
+          </div>
+        </section>
+        <section id="orders" class="section">
+          <div class="section-head">
+            <div>
+              <h2>إدارة الطلبات</h2>
+              <p class="section-subtitle">أضف وحرر الطلبات مع حالة الشحن وتنسيق بيانات واضح.</p>
+            </div>
+            <div class="section-actions">
+              <input type="text" id="orderSearch" placeholder="البحث باسم العميل" class="search-input">
+              <select id="orderStatusFilter" class="status-filter">
+                <option value="الكل">الكل</option>
+                <option value="تحت التجهيز">تحت التجهيز</option>
+                <option value="تم الشحن">تم الشحن</option>
+                <option value="تم التسليم">تم التسليم</option>
+                <option value="ملغي">ملغي</option>
+                <option value="معاد">معاد</option>
+              </select>
+              <button onclick="exportOrders()" class="btn btn-outline">تصدير إلى Excel</button>
+            </div>
+          </div>
+          <form id="orderForm" class="card form-card">
+            <div class="form-grid">
+              <input type="number" id="orderId" placeholder="كود الطلب" min="1" required>
+              <input type="text" id="customerName" placeholder="اسم العميل" required>
+              <input type="tel" id="customerPhone" placeholder="رقم التليفون" required>
+              <input type="text" id="customerAddress" placeholder="عنوان العميل" required>
+              <div class="textarea-with-action">
+                <textarea id="orderDetails" placeholder="اكتب هنا ليظهر اقتراح من الكتب الموجودة"></textarea>
+                <span class="textarea-search-icon" aria-hidden="true">🔍</span>
+                <div id="orderBookSuggestions" class="suggestions-list hidden"></div>
+              </div>
+              <div class="notes-with-action">
+                <button type="button" id="copyOrderNotesBtn" class="copy-icon-btn note-copy-btn" aria-label="نسخ الملاحظات إلى الحافظة" title="نسخ الملاحظات إلى الحافظة">📋</button>
+                <textarea id="orderNotes" placeholder="ملاحظات إضافية عن الطلب"></textarea>
+              </div>
+              <input type="number" id="paidAmount" placeholder="المبلغ المدفوع" step="0.01" required>
+              <input type="number" id="remainingAmount" placeholder="المبلغ الباقي" step="0.01" required>
+              <input type="number" id="shippingCost" placeholder="سعر الشحن التقريبي" step="0.01" required>
+              <select id="shippingStatus" required onchange="handleStatusChange()">
+                <option value="تحت التجهيز">تحت التجهيز</option>
+                <option value="تم الشحن">تم الشحن</option>
+                <option value="تم التسليم">تم التسليم</option>
+                <option value="ملغي">ملغي</option>
+                <option value="معاد">معاد</option>
+              </select>
+            </div>
+            <button type="submit" class="btn btn-gold" id="orderSubmitBtn">إضافة طلب</button>
+          </form>
+          <div class="table-card">
+            <table class="data-table order-table">
+              <thead>
+                <tr>
+                  <th>كود الطلب</th>
+                  <th>العميل</th>
+                  <th>رقم الهاتف</th>
+                  <th>العنوان</th>
+                  <th>التفاصيل</th>
+                  <th>ملاحظات</th>
+                  <th>المدفوع</th>
+                  <th>الباقي</th>
+                  <th>الشحن</th>
+                  <th>الحالة</th>
+                  <th>إجراءات</th>
+                </tr>
+              </thead>
+              <tbody id="orderTable"></tbody>
+            </table>
+          </div>
+        </section>
+        <section id="offers" class="section">
+          <div class="section-head">
+            <div>
+              <h2>إدارة العروض</h2>
+              <p class="section-subtitle">أنشئ عروضاً مميزة مع حساب تلقائي للربح الصافي من الكتب المجمعة.</p>
+            </div>
+            <div class="section-actions">
+              <input type="text" id="offerSearch" placeholder="البحث بالوصف" class="search-input">
+              <button onclick="exportOffers()" class="btn btn-outline">تصدير إلى Excel</button>
+            </div>
+          </div>
+          <form id="offerForm" class="card form-card">
+            <div class="form-grid">
+              <textarea id="offerDescription" placeholder="وصف العرض" required rows="3"></textarea>
+              <div class="form-row">
+                <input type="number" id="offerDuration" placeholder="المدة" min="1" required>
+                <select id="offerUnit" required>
+                  <option value="hours">ساعة</option>
+                  <option value="days">يوم</option>
+                </select>
+                <input type="number" id="offerPrice" placeholder="سعر العرض" min="0" step="0.01" required>
+              </div>
+            </div>
+            <div class="books-selection">
+              <label>الكتب المشمولة في العرض:</label>
+              <input type="text" id="bookSearchOffers" placeholder="البحث في الكتب" class="search-input" style="margin-bottom: 10px;">
+              <div id="booksChecklist" class="books-checklist"></div>
+            </div>
+            <div class="profit-calculator">
+              <div class="profit-display">
+                <span>الربح الصافي المتوقع: </span>
+                <strong id="calculatedProfit">0.00 جنيه</strong>
+              </div>
+              <div class="discount-display">
+                <div>
+                  <span>المبلغ الموفر للعميل:</span>
+                  <strong id="discountAmount">0.00 جنيه</strong>
+                </div>
+                <div>
+                  <span>نسبة الخصم:</span>
+                  <strong id="discountPercent">0%</strong>
+                </div>
+              </div>
+            </div>
+            <button type="submit" class="btn btn-gold" id="offerSubmitBtn">إضافة عرض</button>
+          </form>
+          <div class="table-card">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>الوصف</th>
+                  <th>المدة</th>
+                  <th>الكتب</th>
+                  <th>سعر العرض</th>
+                  <th>الربح الصافي</th>
+                  <th>الحالة</th>
+                  <th>إجراءات</th>
+                </tr>
+              </thead>
+              <tbody id="offerTable"></tbody>
+            </table>
+          </div>
+        </section>
+        <section id="dashboard" class="section">
+          <div class="section-head">
+            <div>
+              <h2>لوحة التحكم</h2>
+              <p class="section-subtitle">نظرة سريعة على أداء المبيعات والمصروفات.</p>
+            </div>
+            <div class="section-actions">
+              <button onclick="exportStatistics()" class="btn btn-outline">تصدير الإحصائيات</button>
+            </div>
+          </div>
+          <div class="grid-cards">
+            <div class="stat-card card-gold">
+              <div class="stat-card-icon">📦</div>
+              <div class="stat-value" id="salesCount">0</div>
+              <div class="stat-label">عدد الطلبات</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-icon">📚</div>
+              <div class="stat-value" id="booksCount">0</div>
+              <div class="stat-label">عدد الكتب</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-icon">💵</div>
+              <div class="stat-value" id="totalPaid">0</div>
+              <div class="stat-label">إجمالي المدفوع</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-icon">⏳</div>
+              <div class="stat-value" id="totalRemaining">0</div>
+              <div class="stat-label">إجمالي المتبقي</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-icon">💸</div>
+              <div class="stat-value" id="dashboardExpenseTotal">0</div>
+              <div class="stat-label">إجمالي المصروفات</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-icon">📈</div>
+              <div class="stat-value" id="dashboardProfitValue">0</div>
+              <div class="stat-label">الربح الصافي</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-icon">🔺</div>
+              <div class="stat-value" id="dashboardProfitPercent">0%</div>
+              <div class="stat-label">نسبة الربح</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-icon">🎁</div>
+              <div class="stat-value" id="activeOffersCount">0</div>
+              <div class="stat-label">العروض النشطة</div>
+            </div>
+          </div>
+          <div class="active-offers-section">
+            <div class="section-head">
+              <div>
+                <h3>العروض النشطة</h3>
+                <p class="section-subtitle">العروض المفعّلة حالياً مع الربح وسعر العرض.</p>
+              </div>
+            </div>
+            <div id="activeOffersContainer" class="active-offers-list"></div>
+          </div>
+          <div class="quick-links-section">
+            <h3>روابط سريعة</h3>
+            <div class="quick-links-grid">
+              <a href="https://egyptpost.gov.eg/ar-eg/home/eservices/%D8%A7%D8%AD%D8%B3%D8%A8-%D8%B4%D8%AD%D9%86%D8%AA%D9%83/" target="_blank" class="quick-link">
+                <div class="quick-link-icon">📦</div>
+                <div class="quick-link-text">حساب الشحن</div>
+              </a>
+              <a href="https://egyptpost.gov.eg/ar-eg/home/eservices/track-and-trace/" target="_blank" class="quick-link">
+                <div class="quick-link-icon">📍</div>
+                <div class="quick-link-text">تتبع الشحنات</div>
+              </a>
+            </div>
+          </div>
+          <div class="charts-section">
+            <div class="chart-container">
+              <h3>معدل الطلبات الشهري</h3>
+              <canvas id="monthlyOrdersChart"></canvas>
+            </div>
+            <div class="chart-container">
+              <h3>معدل الطلبات الأسبوعي</h3>
+              <canvas id="weeklyOrdersChart"></canvas>
+            </div>
+            <div class="chart-container">
+              <h3>إحصائيات المبيعات</h3>
+              <canvas id="salesStatsChart"></canvas>
+            </div>
+          </div>
+        </section>
+        <section id="expenses" class="section">
+          <div class="section-head">
+            <div>
+              <h2>المصروفات</h2>
+              <p class="section-subtitle">سجل المصروفات اليومية بتنسيق مرتب وسهل القراءة.</p>
+            </div>
+          </div>
+          <div class="grid-cards expense-summary-cards">
+            <div class="stat-card card-gold">
+              <div class="stat-value" id="expenseTotal">0</div>
+              <div class="stat-label">إجمالي المصروفات</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value" id="expensePaid">0</div>
+              <div class="stat-label">إجمالي المدفوع</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value" id="expenseProfit">0</div>
+              <div class="stat-label">الربح الصافي</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value" id="expenseProfitPercent">0%</div>
+              <div class="stat-label">نسبة الربح</div>
+            </div>
+          </div>
+          <form id="expenseForm" class="card form-card">
+            <div class="form-grid">
+              <input type="text" id="expenseType" placeholder="نوع المصروف (مواصلات، شراء كتب، إلخ)" required>
+              <input type="number" id="expenseAmount" placeholder="المبلغ" step="0.01" required>
+            </div>
+            <button type="submit" class="btn btn-gold" id="expenseSubmitBtn">إضافة مصروف</button>
+          </form>
+          <div class="table-card">
+            <table class="data-table responsive-table">
+              <thead>
+                <tr>
+                  <th>نوع المصروف</th>
+                  <th>المبلغ</th>
+                  <th>إجراءات</th>
+                </tr>
+              </thead>
+              <tbody id="expenseTable"></tbody>
+            </table>
+          </div>
+        </section>
+        <section id="purchases" class="section">
+          <div class="section-head">
+            <div>
+              <h2>المشتريات</h2>
+              <p class="section-subtitle">قائمة الكتب المطلوبة للشراء تُولد تلقائياً من الطلبات ولا تتكرر بعد الشراء.</p>
+            </div>
+          </div>
+          <div class="card purchase-card">
+            <div class="purchase-summary">
+              <p>هذه القائمة تعرض الكتب المطلوبة من الطلبات غير المشحونة. عند شراء كل كتاب يتم نقله لقائمة المشتريات المنتهية حتى لا يتكرر.</p>
+              <div class="purchase-overview">
+                <div class="purchase-stat">الكتب المطلوبة: <strong id="pendingPurchaseCount">0</strong></div>
+                <div class="purchase-stat">إجمالي سعر الشراء: <strong id="pendingPurchaseCost">0.00</strong> جنيه</div>
+              </div>
+            </div>
+            <div id="purchaseList" class="purchase-list"></div>
+          </div>
+          <div class="card purchase-card">
+            <div class="section-head">
+              <div>
+                <h3>المشتريات المنتهية</h3>
+                <p class="section-subtitle">العناصر التي تم شراؤها، مع تاريخ الإنهاء وسعر الوحدة وإجمالي التكلفة.</p>
+              </div>
+            </div>
+            <div id="completedPurchaseList" class="purchase-list"></div>
+          </div>
+        </section>
+        <section id="links" class="section">
+          <div class="section-head">
+            <div>
+              <h2>الروابط المفيدة</h2>
+              <p class="section-subtitle">روابط سريعة لخدمات البريد المصري والشحن.</p>
+            </div>
+          </div>
+          <div class="grid-cards">
+            <a href="https://egyptpost.gov.eg/ar-eg/home/eservices/%D8%A7%D8%AD%D8%B3%D8%A8-%D8%B4%D8%AD%D9%86%D8%AA%D9%83/" target="_blank" class="link-card card">
+              <div class="link-icon">📦</div>
+              <div class="link-content">
+                <h3>حساب سعر الشحن</h3>
+                <p>احسب تكلفة الشحن للعميل بسهولة</p>
+              </div>
+              <div class="link-arrow">→</div>
+            </a>
+            <a href="https://egyptpost.gov.eg/ar-eg/home/eservices/track-and-trace/" target="_blank" class="link-card card">
+              <div class="link-icon">📍</div>
+              <div class="link-content">
+                <h3>تتبع الشحنات</h3>
+                <p>تابع حالة الشحنات والطلبات</p>
+              </div>
+              <div class="link-arrow">→</div>
+            </a>
+          </div>
+        </section>
+        <section id="backup" class="section">
+          <div class="section-head">
+            <div>
+              <h2>النسخ الاحتياطي</h2>
+              <p class="section-subtitle">تصدير واستيراد بيانات التطبيق للحفاظ عليها.</p>
+            </div>
+          </div>
+          <div class="card backup-card">
+            <div class="backup-actions">
+              <button onclick="exportData()" class="btn btn-gold">تصدير البيانات</button>
+              <button onclick="importData()" class="btn btn-outline">استيراد البيانات</button>
+              <input type="file" id="importFile" accept=".json" style="display: none;">
+            </div>
+            <div class="backup-info">
+              <p><strong>تصدير:</strong> يقوم بتحميل ملف JSON يحتوي على جميع البيانات (الكتب، الطلبات، المصروفات).</p>
+              <p><strong>استيراد:</strong> يقوم بتحميل البيانات من ملف JSON محمل سابقاً. سيتم استبدال البيانات الحالية.</p>
+              <p class="warning">⚠️ تحذير: الاستيراد سيحذف البيانات الحالية ويستبدلها بالبيانات المستوردة.</p>
+            </div>
+          </div>
+        </section>
+        <section id="invoices" class="section">
+          <div class="section-head">
+            <div>
+              <h2>الفواتير</h2>
+              <p class="section-subtitle">عرض الفواتير الحالية والسابقة مع خيارات الطباعة.</p>
+            </div>
+            <div class="section-actions">
+              <input type="text" id="invoiceSearch" placeholder="البحث باسم العميل" class="search-input">
+              <button onclick="showInvoiceType('current')" class="btn btn-outline">الفواتير الحالية</button>
+              <button onclick="showInvoiceType('completed')" class="btn btn-outline">الفواتير السابقة</button>
+            </div>
+          </div>
+          <div id="currentInvoicesContainer" style="display: none;">
+            <h3>الفواتير الحالية</h3>
+            <div id="currentInvoicesList" class="invoices-list"></div>
+          </div>
+          <div id="completedInvoicesContainer" style="display: none;">
+            <h3>الفواتير السابقة</h3>
+            <div id="completedInvoicesList" class="invoices-list"></div>
+          </div>
+        </section>
+    </div>
+  </div>
+
+  <div id="invoiceModal" class="invoice-modal hidden" aria-hidden="true">
+    <div class="invoice-modal-backdrop"></div>
+    <div class="invoice-modal-content" role="dialog" aria-modal="true">
+      <button class="invoice-modal-close" onclick="closeInvoiceModal()">×</button>
+      <div id="invoiceContent" style="padding: 30px; background: white; color: black;">
+        <!-- سيتم ملء محتوى الفاتورة هنا -->
+      </div>
+      <div class="invoice-modal-actions" style="margin-top: 20px; display: flex; gap: 10px; justify-content: center;">
+        <button onclick="printInvoice()" class="btn btn-gold">طباعة</button>
+        <button onclick="closeInvoiceModal()" class="btn button-secondary">إغلاق</button>
+      </div>
+    </div>
+  </div>
+  <div id="confirmModal" class="confirm-modal hidden" aria-hidden="true">
+    <div class="confirm-backdrop"></div>
+    <div class="confirm-card" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+      <h3 id="confirmTitle">تأكيد العملية</h3>
+      <p id="confirmMessage">هل أنت متأكد؟</p>
+      <div class="confirm-actions">
+        <button id="confirmCancel" class="btn button-secondary">إلغاء</button>
+        <button id="confirmAccept" class="btn btn-gold">نعم</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
